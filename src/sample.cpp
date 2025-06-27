@@ -18,25 +18,7 @@ struct fileListEntry{
     std::string type;
     std::string comment;
 };
-// std::string ReadFile(const std::string &path)
-// {
-//     std::ifstream is(path.c_str(), std::ifstream::in);
 
-//     // 寻找文件末端
-//     is.seekg(0, is.end);
-
-//     // 获取长度
-//     int flength = is.tellg();
-
-//     // 重新定位
-//     is.seekg(0, is.beg);
-//     char *buffer = new char[flength];
-
-//     // 读取文件
-//     is.read(buffer, flength);
-//     std::string msg(buffer, flength);
-//     return msg;
-// }
 
 void request_handler(evhttp_request *req, void *arg)
 {
@@ -49,19 +31,19 @@ void request_handler(evhttp_request *req, void *arg)
     int fd;
     evbuffer *buf = evbuffer_new();
     if (std::string(uri) == "/") {
-        fd = ::open("/home/huang/prog/libeventWeb/html/file_management.html", O_RDONLY);
+        fd = ::open("../html/file_management.html", O_RDONLY);
         // body = ReadFile("/home/huang/prog/libeventWeb/html/file_management.html");
     } else if (std::string(uri) == "/file_management.css") {
-        fd = ::open("/home/huang/prog/libeventWeb/html/file_management.css", O_RDONLY);
+        fd = ::open("../html/file_management.css", O_RDONLY);
         // body = ReadFile("/home/huang/prog/libeventWeb/html/file_management.css");
         content_type = "text/css; charset=UTF-8";
     } else if (std::string(uri) == "/file_management.js") {
-        fd = ::open("/home/huang/prog/libeventWeb/html/file_management.js", O_RDONLY);
+        fd = ::open("../html/file_management.js", O_RDONLY);
         // body = ReadFile("/home/huang/prog/libeventWeb/html/file_management.js");
         content_type = "application/javascript; charset=UTF-8";
     }
     else if(std::string(uri) == "/favicon.ico"){
-        fd = ::open("/home/huang/prog/libeventWeb/html/kicat.jpg", O_RDONLY);
+        fd = ::open("../html/kicat.jpg", O_RDONLY);
         // body = ReadFile("/home/huang/prog/libeventWeb/html/琪猫猫.jpg");
         content_type = "image/jpeg";
     }
@@ -89,7 +71,7 @@ void filelsit_handler(evhttp_request *req, void *arg)
     const char *uri = evhttp_request_get_uri(req);
     std::cout << "Request for " << uri << std::endl;
     std::string content_type = "application/json; charset=UTF-8";
-    std:: string body = "{\"files\":[{\"name\":\"a.txt\",\"path\":\"/home/huang/prog/libeventWeb/file/a.txt\",\"type\":\"txt\",\"comment\":\"test\"}]}";
+    std:: string body = "{\"files\":[{\"name\":\"a.txt\",\"location\":\"haung-ubuntu\",\"path\":\"../file/a.txt\",\"type\":\"txt\",\"comment\":\"test\"}]}";
     evbuffer *buf = evbuffer_new();
     evbuffer_add(buf, body.c_str(), body.size());
     struct evkeyvalq *headers = evhttp_request_get_output_headers(req);
@@ -130,12 +112,19 @@ void download_handler(evhttp_request *req, void *arg)
     evbuffer_free(buf);
     ::close(filefd);
 }
+
+void upload_handler(evhttp_request *req, void *arg){
+    const char* uri=evhttp_request_get_uri(req);
+    std::cout<<"Request for:"<<uri<<std::endl;
+    
+}
 int main()
 {
     fileListEntry fle = {"file1", "/home/file1", "file", "file1 comment"};
     struct event_base *base;
     struct evhttp *http;
     base = event_base_new();
+    
     if (base == nullptr) {
         std::cerr << "Failed to create event_base: " << strerror(errno) << std::endl;
         return 1;
@@ -160,6 +149,9 @@ int main()
     evhttp_set_cb(http, "/file_management.js", request_handler, nullptr);
     evhttp_set_cb(http, "/api/files", filelsit_handler, nullptr);
     evhttp_set_cb(http, "/api/files/download", download_handler, nullptr);
+    evhttp_set_cb(http, "/favicon.ico", request_handler, nullptr);
+    evhttp_set_cb(http, "/api/files/upload", upload_handler, nullptr);
+    
 
     std::cout << "Starting server on port 12345..." << std::endl;
 
