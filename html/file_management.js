@@ -28,12 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const host = window.location.hostname; // 获取本机 IP 或域名
             const port = 12345; // 端口号保持固定
-            const url = `http://${host}:${port}/api/files/search?keyword=${encodeURIComponent(keyword)}`;
+            const url = `http://${host}:${port}/api/files/search?keywords=${encodeURIComponent(keyword)}`;
             const response = await fetch(url);
             // const response = await fetch(`http://127.0.0.1:12345/api/files/search?keyword=${encodeURIComponent(keyword)}`);
-            if (!response.ok) throw new Error('搜索文件失败');
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMessage = errorData.message || '删除失败';
+                showError(errorMessage);
+                throw new Error('搜索文件失败');
+            }
             const results = await response.json();
-            renderFileList(results);
+            renderFileList(results.files);
         } catch (error) {
             console.error('搜索文件错误:', error);
         }
@@ -97,21 +102,54 @@ function renderFileList(files) {
         deleteBtn.textContent = '删除';
         deleteBtn.style.marginLeft = '10px';
         deleteBtn.addEventListener('click', async () => {
+            if (!confirm('确定要删除该文件吗？')) return; // 弹窗确认
+
             try {
                 const response = await fetch(`http://${host}:${port}/api/files/delete?path=${encodeURIComponent(file.path)}`, {
                     method: 'POST'
                 });
 
-                if (!response.ok) throw new Error('删除失败');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorMessage = errorData.message || '删除失败';
+                    showError(errorMessage);
+                    return;
+                }
 
                 // 刷新文件列表
                 showListBtn.click(); // 触发显示列表按钮的点击事件
             } catch (error) {
                 console.error('删除文件错误:', error);
+                showError('无法连接到服务器或发生未知错误');
             }
         });
 
         actionCell.appendChild(deleteBtn);
     });
 }
+
+// 显示错误信息的函数
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// 创建错误信息显示区域（如果尚未存在）
+const errorMessage = document.createElement('div');
+errorMessage.id = 'error-message';
+errorMessage.style.color = 'red';
+errorMessage.style.marginTop = '10px';
+errorMessage.style.display = 'none';
+
+// 获取文件列表容器
+const fileListContainer = document.getElementById('fileList');
+if (fileListContainer) {
+    // 将错误信息 div 插入到文件列表容器前面
+    fileListContainer.parentNode.insertBefore(errorMessage, fileListContainer);
+} else {
+    // 如果没有找到文件列表容器，则添加到 body 末尾
+    document.body.appendChild(errorMessage);
+}
+
 });
